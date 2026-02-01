@@ -1,0 +1,7 @@
+{
+  "name": "Maptivity",
+  "description": "A discovery tool that helps users find local activities and attractions within a specific map region using Gemini's Google Maps grounding.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}

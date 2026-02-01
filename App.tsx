@@ -1,0 +1,87 @@
+
+import React, { useState, useCallback, useEffect } from 'react';
+import Header from './components/Header';
+import MapContainer from './components/MapContainer';
+import Sidebar from './components/Sidebar';
+import { Activity } from './types';
+import { findActivities } from './services/geminiService';
+
+const App: React.FC = () => {
+  const [activities, setActivities] = useState<Activity[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [currentLocation, setCurrentLocation] = useState({ lat: 37.7749, lng: -122.4194 }); // Default SF
+  const [searchQuery, setSearchQuery] = useState("Fun things to do");
+
+  useEffect(() => {
+    // Get user location on mount
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setCurrentLocation({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          });
+        },
+        () => console.log("User denied location access")
+      );
+    }
+  }, []);
+
+  const handleSearch = useCallback(async (query: string) => {
+    setIsLoading(true);
+    setSearchQuery(query);
+    const result = await findActivities(query, currentLocation.lat, currentLocation.lng);
+    setActivities(result.activities);
+    setIsLoading(false);
+    setIsSidebarOpen(true);
+  }, [currentLocation]);
+
+  const handleMapMove = useCallback((lat: number, lng: number) => {
+    setCurrentLocation({ lat, lng });
+  }, []);
+
+  const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
+
+  return (
+    <div className="relative h-screen w-full flex flex-col overflow-hidden font-sans">
+      <Header />
+      
+      <main className="flex-1 relative">
+        <MapContainer 
+          onRegionSelect={handleMapMove}
+          center={currentLocation}
+        />
+
+        <Sidebar 
+          isOpen={isSidebarOpen}
+          toggle={toggleSidebar}
+          activities={activities}
+          isLoading={isLoading}
+          onSearch={handleSearch}
+          searchQuery={searchQuery}
+        />
+
+        {/* Floating Scan Button for interactions */}
+        <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-20">
+          <button 
+            onClick={() => handleSearch(searchQuery)}
+            disabled={isLoading}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-3 rounded-full shadow-2xl font-bold flex items-center gap-2 transition-all transform hover:scale-105 active:scale-95 disabled:opacity-50"
+          >
+            {isLoading ? (
+              <span className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full"></span>
+            ) : (
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
+              </svg>
+            )}
+            Search in this region
+          </button>
+        </div>
+      </main>
+    </div>
+  );
+};
+
+export default App;
